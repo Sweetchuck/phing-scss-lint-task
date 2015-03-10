@@ -379,8 +379,8 @@ class ScssLintTask extends Task
         }
         array_unshift($this->commandArgs, escapeshellcmd($this->executable));
 
-        if ($this->dir) {
-            chdir($this->dir);
+        if ($this->dir && !chdir($this->dir)) {
+            throw new BuildException('Working directory is not exists.');
         }
 
         $command = vsprintf($this->commandPattern, $this->commandArgs);

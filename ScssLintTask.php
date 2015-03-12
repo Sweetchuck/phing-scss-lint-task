@@ -100,6 +100,11 @@ class ScssLintTask extends Task
     /**
      * @var string
      */
+    protected $outputProperty = '';
+
+    /**
+     * @var string
+     */
     protected $dir = '';
 
     /**
@@ -195,6 +200,14 @@ class ScssLintTask extends Task
     public function setReturnProperty($value)
     {
         $this->returnProperty = $value;
+    }
+
+    /**
+     * @param string $value
+     */
+    public function setOutputProperty($value)
+    {
+        $this->outputProperty = $value;
     }
 
     /**
@@ -355,6 +368,7 @@ class ScssLintTask extends Task
         $project = $this->getProject();
         foreach ($this->fileSets as $fileset) {
             $dir_scanner = $fileset->getDirectoryScanner($project);
+            /** @var array $files */
             $files = $dir_scanner->getIncludedFiles();
             $dir = $fileset->getDir($project)->getPath();
 
@@ -402,6 +416,10 @@ class ScssLintTask extends Task
     protected function executePost() {
         if ($this->returnProperty) {
             $this->project->setProperty($this->returnProperty, $this->commandExitCode);
+        }
+
+        if ($this->outputProperty) {
+            $this->project->setProperty($this->outputProperty, implode("\n", $this->commandOutput));
         }
 
         foreach ($this->commandOutput as $line) {

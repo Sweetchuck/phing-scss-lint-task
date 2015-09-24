@@ -151,6 +151,11 @@ class ScssLintTask extends Task
     );
 
     /**
+     * @var boolean
+     */
+    protected $outUse = FALSE;
+
+    /**
      * All fileset objects assigned to this task.
      *
      * @var ScssLintParam[]
@@ -306,6 +311,14 @@ class ScssLintTask extends Task
     }
 
     /**
+     * @param boolean $value
+     */
+    public function setOutUse($value)
+    {
+        $this->outUse = $value;
+    }
+
+    /**
      * Nested adder, adds a set of files (nested fileset attribute).
      *
      * @param FileSet $file_set
@@ -417,6 +430,10 @@ class ScssLintTask extends Task
         }
 
         foreach ($this->options as $name => $value) {
+            if ($name === 'out' && !$this->outUse) {
+              continue;
+            }
+
             if ($value) {
                 $this->commandPattern .= ' --' . $name . '=%s';
                 $this->commandArgs[] = $value;

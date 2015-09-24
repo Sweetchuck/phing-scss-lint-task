@@ -108,6 +108,18 @@ class ScssLintTask extends Task
     protected $dir = '';
 
     /**
+     * Flag that shows 'bundle exec' is required or not.
+     *
+     * @var bool
+     */
+    protected $bundleExec = NULL;
+
+    /**
+     * @var string
+     */
+    protected $bundleExecutable = 'bundle';
+
+    /**
      * @var string
      */
     protected $executable = 'scss-lint';
@@ -176,6 +188,22 @@ class ScssLintTask extends Task
         }
 
         return $this;
+    }
+
+    /**
+     * @param boolean $value
+     */
+    public function setBundleExec($value)
+    {
+        $this->bundleExec = $value;
+    }
+
+    /**
+     * @param string $value
+     */
+    public function setBundleExecutable($value)
+    {
+        $this->bundleExecutable = $value;
     }
 
     /**
@@ -334,7 +362,30 @@ class ScssLintTask extends Task
             throw new BuildException('scss-lint executable is missing.');
         }
 
+        $allowed_values = array(
+            'true',
+            'false',
+            'TRUE',
+            'FALSE',
+            'auto',
+            TRUE,
+            FALSE,
+            NULL
+        );
+        if (!in_array($this->bundleExec, $allowed_values, TRUE)) {
+            throw new \BuildException("The '{$this->bundleExec}' is an invalid value for 'scss-lint[bundleExec]'");
+        }
+
         return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function executeWithBundle() {
+        $gem_file = ($this->dir ?: '.') . '/Gemfile';
+
+        return (gettype($this->bundleExec) === 'boolean' ? $this->bundleExec : file_exists($gem_file));
     }
 
     /**
@@ -343,6 +394,27 @@ class ScssLintTask extends Task
     protected function executePrepare() {
         $this->commandPattern = '';
         $this->commandArgs = array();
+
+        if (gettype($this->bundleExec) === 'string') {
+            switch (strtolower($this->bundleExec)) {
+                case 'true':
+                    $this->bundleExec = TRUE;
+                  break;
+
+                case 'false':
+                    $this->bundleExec = FALSE;
+                  break;
+
+                default:
+                    $this->bundleExec = NULL;
+                    break;
+
+            }
+        }
+
+        if ($this->executeWithBundle() && empty($this->bundleExecutable)) {
+            throw new \BuildException("The '{$this->bundleExecutable}' is an invalid value for 'scss-lint[bundleExecutable]'");
+        }
 
         foreach ($this->options as $name => $value) {
             if ($value) {
@@ -387,11 +459,22 @@ class ScssLintTask extends Task
      * @throws BuildException
      */
     protected function execute() {
-        $this->commandPattern = '%s ' . $this->commandPattern;
         foreach (array_keys($this->commandArgs) as $key) {
             $this->commandArgs[$key] = escapeshellarg($this->commandArgs[$key]);
         }
-        array_unshift($this->commandArgs, escapeshellcmd($this->executable));
+
+        if ($this->executeWithBundle()) {
+            $this->commandPattern = '%s exec %s ' . $this->commandPattern;
+            array_unshift(
+                $this->commandArgs,
+                escapeshellcmd($this->bundleExecutable),
+                escapeshellarg($this->executable)
+            );
+        }
+        else {
+            $this->commandPattern = '%s ' . $this->commandPattern;
+            array_unshift($this->commandArgs, escapeshellcmd($this->executable));
+        }
 
         if ($this->dir && !chdir($this->dir)) {
             throw new BuildException('Working directory is not exists.');
